@@ -3,7 +3,7 @@ from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 from starlette.exceptions import HTTPException
 from database import cursor
-from crud import get_players,get_player
+from crud import get_players,get_player,create_player
 import json
 
 async def players(request):
@@ -22,13 +22,29 @@ async def player(request):
             raise HTTPException(status_code=404,detail="Player not found")
     return JSONResponse(results)
 
-async def attack_player(request):
-    return JSONResponse([])
+PROFESSION = {
+    'mage': {"hp":50,"attack":15},
+    'knight': {"hp":50,"attack":15}
+}
+
+async def create_player(request):
+    data = await request.json()
+    profession = data.get('profession')
+    profession_data = PROFESSION.get(profession)
+    breakpoint()
+    data['hp'] = profession_data['hp']
+    data['attack'] = profession_data['attack']
+
+
+    with cursor() as cur:
+        player = create_player(cur,data)
+    
+    return JSONResponse(player)
 
 routes = [
     Route('/api/players',players),
     Route('/api/player',player),
-    Route('/api/player/{name}',attack_player)
+    Route('/api/createplayer',create_player,methods=['POST'])
 ]
 
 app = Starlette(debug=True, routes=routes)

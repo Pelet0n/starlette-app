@@ -16,3 +16,7 @@ def get_player(db,name):
     if not player_data:
         return None
     return player_to_dict(*player_data)
+
+def create_player(db,name,proffesion,hp,attack_points):
+    query = "INSERT INTO players(name,proffesion) VALUES(:name,:proffesion, :hp,:attack_points)"
+    db.execute(query,[name,proffesion])
