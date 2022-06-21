@@ -1,3 +1,4 @@
+from sqlite3 import IntegrityError
 from utils import player_to_dict
 
 def get_players(db):
@@ -5,7 +6,6 @@ def get_players(db):
     results = []
 
     for player in db.execute(query):
-        breakpoint()
         player_data = player_to_dict(*player)
         results.append(player_data)
     return results
@@ -17,12 +17,23 @@ def get_player(db,name):
         return None
     return player_to_dict(*player_data)
 
-def create_player(db,name,proffesion,hp,attack_points):
-    check_exist = db.execute("SELECT * FROM players WHERE name=?",[name]).fetchone()
-    if check_exist:
+def get_player_by_id(db,rowid):
+    query = "Select rowid, name, proffesion, hp, attack_points,status,deaths,kills FROM players WHERE rowid=?"
+    player_data = db.execute(query,[rowid]).fetchone()
+    if not player_data:
         return None
-    query = "INSERT INTO players(name,proffesion,hp,attack_points) VALUES(?,?,?,?)"
-    db.execute(query,(name,proffesion,hp,attack_points))
-    player_data = db.execute("SELECT rowid, name, proffesion,hp,attack_points,status,deaths,kills FROM players WHERE name=?",[name]).fetchone()
-
     return player_to_dict(*player_data)
+
+def create_player(db,name,proffesion,hp,attack_points):
+    # check_exist = db.execute("SELECT * FROM players WHERE name=?",[name]).fetchone()
+    # if check_exist:
+    #     return None
+    query = "INSERT INTO players(name,proffesion,hp,attack_points) VALUES(?,?,?,?)"
+    try:
+        player = db.execute(query,(name,proffesion,hp,attack_points))
+    except IntegrityError:
+        return None
+    
+    player_data = get_player_by_id(db,player.lastrowid)
+
+    return player_data
