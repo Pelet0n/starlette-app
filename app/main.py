@@ -22,29 +22,28 @@ async def player(request):
             raise HTTPException(status_code=404,detail="Player not found")
     return JSONResponse(results)
 
-PROFESSION = {
-    'mage': {"hp":50,"attack":15},
-    'knight': {"hp":50,"attack":15}
+PROFFESION = {
+    'mage': {"hp":50,"attack_points":15},
+    'knight': {"hp":70,"attack_points":30}
 }
 
-async def create_player(request):
-    data = await request.json()
-    profession = data.get('profession')
-    profession_data = PROFESSION.get(profession)
-    breakpoint()
-    data['hp'] = profession_data['hp']
-    data['attack'] = profession_data['attack']
-
-
+async def create_players(request):
     with cursor() as cur:
-        player = create_player(cur,data)
-    
+        data = await request.json()
+        proffesion = data.get('proffesion')
+        proffesion_data = PROFFESION.get(proffesion)
+        data.update(proffesion_data)
+
+        player = create_player(cur,**data)
+        if not player:
+            raise HTTPException(status_code=404,detail="Player with that name already exists")
+
     return JSONResponse(player)
 
 routes = [
     Route('/api/players',players),
     Route('/api/player',player),
-    Route('/api/createplayer',create_player,methods=['POST'])
+    Route('/api/createplayer',create_players,methods=['POST'])
 ]
 
 app = Starlette(debug=True, routes=routes)
