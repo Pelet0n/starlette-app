@@ -37,3 +37,36 @@ def create_player(db,name,proffesion,hp,attack_points):
     player_data = get_player_by_id(db,player.lastrowid)
 
     return player_data
+
+def attack_user(db,attack_points,target,base_hp):
+    target['hp'] -= attack_points
+    if target['hp'] <= 0:
+        target['hp'] = base_hp
+        target['deaths'] += 1
+        target['status'] = "offline"
+
+    db.execute("UPDATE players SET hp=?, deaths=?, status=? WHERE rowid=?",(target['hp'],target['deaths'],target['status'],target['id']))
+    return target
+
+    # try:
+    #     user_rows = db.execute("SELECT attack_points,kills FROM players WHERE rowid=?",[user_id]).fetchone() 
+    #     attack_points = user_rows[0]
+    #     kills = user_rows[1]
+    # except TypeError:
+    #     return None
+    # try:
+    #     target_rows = db.execute("SELECT hp,deaths FROM players WHERE rowid=?",[target_id]).fetchone()
+    #     target_hp = target_rows[0]
+    #     target_deaths = target_rows[1]
+    # except TypeError:
+    #     return None
+    # if target_hp <= 0:
+    #     return target_hp
+
+    # new_hp = target_hp - attack_points
+    # if new_hp <= 0:
+    #     target_deaths += 1
+    #     kills += 1
+    # db.execute("UPDATE players SET hp=?, deaths=? WHERE rowid=?",(new_hp,target_deaths,target_id))
+    # db.execute("UPDATE players SET kills=? WHERE rowid=?",(kills,user_id))
+    # return attack_points, target_hp, new_hp,target_deaths

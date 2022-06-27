@@ -5,7 +5,7 @@ from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 from starlette.exceptions import HTTPException
 from database import cursor
-from crud import get_players,get_player,create_player,get_player_by_id
+from crud import get_players,get_player,create_player,get_player_by_id,attack_user
 import json
 
 async def players(request):
@@ -25,7 +25,7 @@ async def player(request):
     return JSONResponse(results)
 
 PROFFESION = {
-    'mage': {"hp":50,"attack_points":15},
+    'Mage': {"hp":50,"attack_points":15},
     'knight': {"hp":70,"attack_points":30}
 }
 
@@ -65,12 +65,37 @@ async def status_offline(request):
         
     return JSONResponse(player)
 
+async def attack_player(request):
+    data = await request.json()
+    target_id= data['target_user']
+    id = request.path_params['user_id']
+    with cursor() as cur:
+        player = get_player_by_id(cur,id)
+        target  = get_player_by_id(cur,target_id)
+        if not player:
+            pass
+        if not target:
+            pass
+        if not target['status'] == 'online':
+            raise HTTPException(status_code=404,detail="Player is offline")
+        attack_points = player['attack_points']
+        base_hp = PROFFESION.get(target['proffesion'])['hp']
+        attack_data = attack_user(cur,attack_points,target,base_hp)
+        target.update(attack_data)
+       # cur.execute("UPDATE players SET hp=50, deaths=0 WHERE rowid=?",[target_id])
+        # if player_data == None:
+        #     raise HTTPException(status_code=404,detail="Player not found")
+        # if player_data[2] <= 0:
+        #     pass
+    return JSONResponse(target)
+
 routes = [
     Route('/api/players',players),
     Route('/api/player',player),
     Route('/api/createplayer',create_players,methods=['POST']),
     Route('/api/player/{user_id}/online',status_online),
-    Route('/api/player/{user_id}/offline',status_offline)
+    Route('/api/player/{user_id}/offline',status_offline),
+    Route('/api/player/{user_id}/attack',attack_player,methods=['POST'])
 ]
 
 app = Starlette(debug=True, routes=routes)
