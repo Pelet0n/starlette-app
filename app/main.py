@@ -8,6 +8,7 @@ from database import cursor
 from crud import get_players,get_player,create_player,get_player_by_id,attack_user
 import json
 
+
 async def players(request):
     with cursor() as cur:
         results = get_players(cur)
@@ -44,7 +45,7 @@ async def create_players(request):
 
 async def status_online(request):
     id = request.path_params['user_id']
-    with cursor() as cur:
+    with cursor() as cur:   
         status = cur.execute('SELECT status FROM players WHERE rowid=?',[id]).fetchone()
         if not status:
             raise HTTPException(status_code=404,detail="Player not found")
@@ -72,6 +73,7 @@ async def attack_player(request):
     with cursor() as cur:
         player = get_player_by_id(cur,id)
         target  = get_player_by_id(cur,target_id)
+        breakpoint()
         if not player:
             pass
         if not target:

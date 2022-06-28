@@ -4,7 +4,6 @@ from app.database import cursor
 from app.utils import player_to_dict
 
 
-
 @pytest.fixture
 def player():
     with cursor() as cur:
