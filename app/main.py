@@ -1,4 +1,3 @@
-from __future__ import barry_as_FLUFL
 from sqlite3 import IntegrityError
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse, PlainTextResponse
@@ -6,8 +5,9 @@ from starlette.routing import Route
 from starlette.exceptions import HTTPException
 from database import cursor
 from crud import get_players,get_player,create_player,get_player_by_id,attack_user
+from utils import create_jwt_token,check_jwt_token
 import json
-
+from jwt import exceptions
 
 async def players(request):
     with cursor() as cur:
@@ -26,8 +26,9 @@ async def player(request):
     return JSONResponse(results)
 
 PROFFESION = {
-    'Mage': {"hp":50,"attack_points":15},
-    'knight': {"hp":70,"attack_points":30}
+    'MAGE': {"hp":50,"attack_points":15},
+    'KNIGHT': {"hp":70,"attack_points":30},
+    'PALADIN': {"hp": 60, "attack_points": 40}
 }
 
 async def create_players(request):
@@ -53,7 +54,9 @@ async def status_online(request):
             raise HTTPException(status_code=404,detail="Player is online")
         cur.execute('UPDATE players SET status="online" WHERE rowid=?',[id])
         player = get_player_by_id(cur,id)
-    return JSONResponse(player)
+    token = create_jwt_token(player)
+
+    return JSONResponse({'token':token, 'player':player})
 
 async def status_offline(request):
     id = request.path_params['user_id']
@@ -69,26 +72,45 @@ async def status_offline(request):
 async def attack_player(request):
     data = await request.json()
     target_id= data['target_user']
+    if 'Authorization' not in request.headers:
+        raise HTTPException(status_code=401,detail="Unauthorized")
+    token = request.headers['Authorization']
+    if not token:
+        return JSONResponse("Missing token")
+    
     id = request.path_params['user_id']
     with cursor() as cur:
         player = get_player_by_id(cur,id)
         target  = get_player_by_id(cur,target_id)
-        breakpoint()
+
         if not player:
-            pass
+            raise HTTPException(status_code=404,detail="Player does not exist")
         if not target:
-            pass
+            raise HTTPException(status_code=404,detail="Target does not exist")
+
+        if player['status'] == "offline":
+            return JSONResponse("You are offline")
+
+        player_payload = {
+            "id": player['id'],
+            "name": player['name'],
+            "proffesion": player['proffesion']
+        }
+
+        
+        try:
+            payload = check_jwt_token(token)
+        except exceptions.InvalidTokenError:
+            raise HTTPException(status_code=404,detail="Invalid token")
+
+        if payload != player_payload:
+            raise HTTPException(status_code=401,detail="Player not authorized")
         if not target['status'] == 'online':
-            raise HTTPException(status_code=404,detail="Player is offline")
+            raise HTTPException(status_code=404,detail="Target is offline")
         attack_points = player['attack_points']
-        base_hp = PROFFESION.get(target['proffesion'])['hp']
+        base_hp = PROFFESION.get(target['proffesion'].upper())['hp']
         attack_data = attack_user(cur,attack_points,target,base_hp)
         target.update(attack_data)
-       # cur.execute("UPDATE players SET hp=50, deaths=0 WHERE rowid=?",[target_id])
-        # if player_data == None:
-        #     raise HTTPException(status_code=404,detail="Player not found")
-        # if player_data[2] <= 0:
-        #     pass
     return JSONResponse(target)
 
 routes = [
